@@ -20,10 +20,10 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center space-x-0
-            -translate-x-[6px]
+            -translate-x-[5px]
             sm:-translate-x-[9px]
-            md:-translate-x-[8px]
-            lg:-translate-x-[8px]
+            md:-translate-x-[9px]
+            lg:-translate-x-[9px]
             xl:-translate-x-[9px]"
           >
               <Logo className="h-[36px] w-[40px] sm:h-[44px] sm:w-[48px] lg:h-[56px] lg:w-[64px]" />
