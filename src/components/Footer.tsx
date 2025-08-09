@@ -31,8 +31,8 @@ const Footer = () => {
               -translate-x-[6px]
               sm:-translate-x-[6px]
               md:-translate-x-[6px]
-              lg:-translate-x-[8px]
-              xl:-translate-x-[8px]"
+              lg:-translate-x-[7px]
+              xl:-translate-x-[7px]"
               >Compass</span>
             </div>
             <p className="text-gray-300 text-xs sm:text-sm lg:text-base leading-relaxed text-high-quality nav-text-quality font-poppins ultra-sharp-text">
