@@ -5,6 +5,7 @@ import GoogleButton from '@/components/auth/GoogleButton';
 import EmailPasswordForm from '@/components/auth/EmailPasswordForm';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import Logo from '@/components/Logo';
+import { ArrowLeft } from "lucide-react";
 const Signup = () => {
   const {
     user,
@@ -86,10 +87,11 @@ const Signup = () => {
             <div className="text-center">
               <Link
                 to="/"
-                className="inline-flex items-center justify-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex items-center justify-center gap-2 text-gray-800 hover:text-gray-600"
+                style={{ fontSize: "14px" }}
               >
-                <span className="inline-block leading-none align-middle">←</span>
-                <span className="align-middle">Back to Home</span>
+              <ArrowLeft style={{ width: "16px", height: "14px" }} />
+              <span>Back to Home</span>
               </Link>
             </div>
             </div>
