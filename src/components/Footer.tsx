@@ -21,7 +21,7 @@ const Footer = () => {
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center space-x-0
             -translate-x-[6px]
-            sm:-translate-x-[8px]
+            sm:-translate-x-[9px]
             md:-translate-x-[9px]
             lg:-translate-x-[9px]
             xl:-translate-x-[9px]"
