@@ -21,19 +21,21 @@ const Footer = () => {
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-center space-x-0
             -translate-x-[6px]
-            sm:-translate-x-[9px]
-            md:-translate-x-[9px]
-            lg:-translate-x-[9px]
-            xl:-translate-x-[9px]"
+          sm:-translate-x-[8px]
+          md:-translate-x-[9px]
+          lg:-translate-x-[9px]
+          xl:-translate-x-[9px]"
           >
-              <Logo className="h-[36px] w-[40px] sm:h-[44px] sm:w-[48px] lg:h-[56px] lg:w-[64px]" />
-              <span className="text-lg sm:text-xl lg:text-2xl font-bold text-high-quality nav-text-quality font-poppins ultra-sharp-text
-              -translate-x-[6px]
-              sm:-translate-x-[8px]
-              md:-translate-x-[5px]
-              lg:-translate-x-[5px]
-              xl:-translate-x-[8px]"
-              >Compass</span>
+            <Logo className="h-[36px] w-[40px] sm:h-[44px] sm:w-[48px] lg:h-[56px] lg:w-[64px]" />
+            <span className="text-lg sm:text-xl lg:text-2xl font-bold text-high-quality nav-text-quality font-poppins ultra-sharp-text
+             -translate-x-[6px]
+             sm:-translate-x-[7px]
+             md:-translate-x-[7px]
+             lg:-translate-x-[9px]
+             xl:-translate-x-[9px]"
+            >
+              Compass
+            </span>
             </div>
             <p className="text-gray-300 text-xs sm:text-sm lg:text-base leading-relaxed text-high-quality nav-text-quality font-poppins ultra-sharp-text">
               Discover the world with curated travel packages designed for unforgettable experiences.
