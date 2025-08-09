@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import Logo from '@/components/Logo';
+import { ArrowLeft } from "lucide-react";
 const PrivacyPolicy = () => {
   return <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -134,10 +135,15 @@ const PrivacyPolicy = () => {
               </div>
             </section>
 
-            <div className="text-center pt-8">
-              <Link to="/" className="inline-flex items-center text-primary hover:text-primary/80 font-medium transition-colors">
-                ← Back to Home
-              </Link>
+            <div className="text-center">
+                <Link
+                    to="/"
+                    className="flex items-center justify-center gap-2 text-gray-800 hover:text-gray-600"
+                    style={{ fontSize: "14px" }}
+                  >
+                  <ArrowLeft style={{ width: "16px", height: "14px" }} />
+                  <span>Back to Home</span>
+                </Link>
             </div>
           </CardContent>
         </Card>
