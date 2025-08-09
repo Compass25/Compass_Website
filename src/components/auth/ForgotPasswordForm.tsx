@@ -85,14 +85,14 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }) => {
           </p>
         </div>
         
- <div 
-  onClick={onBack} 
-  className="flex items-center justify-center gap-2 cursor-pointer text-gray-800 hover:text-gray-600"
-  style={{ fontSize: "14px" }} // set your desired font size here
->
-  <ArrowLeft style={{ width: "16px", height: "14px" }} /> 
-  <span>Back to Login</span>
-</div>
+       <div 
+          onClick={onBack} 
+          className="flex items-center justify-center gap-2 cursor-pointer text-gray-800 hover:text-gray-600"
+          style={{ fontSize: "14px" }} // set your desired font size here
+       >
+          <ArrowLeft style={{ width: "16px", height: "14px" }} /> 
+          <span>Back to Login</span>
+      </div>
       </div>
     );
   }
