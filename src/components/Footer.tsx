@@ -29,10 +29,10 @@ const Footer = () => {
               <Logo className="h-[36px] w-[40px] sm:h-[44px] sm:w-[48px] lg:h-[56px] lg:w-[64px]" />
               <span className="text-lg sm:text-xl lg:text-2xl font-bold text-high-quality nav-text-quality font-poppins ultra-sharp-text
               -translate-x-[6px]
-              sm:-translate-x-[7.5px]
-              md:-translate-x-[7.5px]
-              lg:-translate-x-[7.5px]
-              xl:-translate-x-[7.5px]"
+              sm:-translate-x-[8px]
+              md:-translate-x-[8px]
+              lg:-translate-x-[8px]
+              xl:-translate-x-[8px]"
               >Compass</span>
             </div>
             <p className="text-gray-300 text-xs sm:text-sm lg:text-base leading-relaxed text-high-quality nav-text-quality font-poppins ultra-sharp-text">
