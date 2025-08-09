@@ -83,15 +83,16 @@ const Signup = () => {
                 </p>
               </div>
               
-             <div className="text-center">
+            <div className="text-center">
   <Link
     to="/"
     className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
   >
-    <span className="text-base leading-none">←</span>
+    <span className="text-lg font-bold leading-none">←</span>
     <span>Back to Home</span>
   </Link>
 </div>
+
             </div>
           </CardContent>
         </Card>
