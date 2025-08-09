@@ -22,8 +22,8 @@ const Footer = () => {
             <div className="flex items-center space-x-0
             -translate-x-[6px]
             sm:-translate-x-[9px]
-            md:-translate-x-[9px]
-            lg:-translate-x-[9px]
+            md:-translate-x-[8px]
+            lg:-translate-x-[8px]
             xl:-translate-x-[9px]"
           >
               <Logo className="h-[36px] w-[40px] sm:h-[44px] sm:w-[48px] lg:h-[56px] lg:w-[64px]" />
