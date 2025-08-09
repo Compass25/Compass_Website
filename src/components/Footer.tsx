@@ -31,7 +31,7 @@ const Footer = () => {
               -translate-x-[5px]
               sm:-translate-x-[8px]
               md:-translate-x-[5px]
-              lg:-translate-x-[8px]
+              lg:-translate-x-[5px]
               xl:-translate-x-[8px]"
               >Compass</span>
             </div>
