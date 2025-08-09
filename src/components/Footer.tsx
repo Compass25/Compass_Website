@@ -30,8 +30,8 @@ const Footer = () => {
               <span className="text-lg sm:text-xl lg:text-2xl font-bold text-high-quality nav-text-quality font-poppins ultra-sharp-text
               -translate-x-[5px]
               sm:-translate-x-[8px]
-              md:-translate-x-[8px]
-              lg:-translate-x-[8px]
+              md:-translate-x-[7px]
+              lg:-translate-x-[7px]
               xl:-translate-x-[8px]"
               >Compass</span>
             </div>
