@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
@@ -15,20 +14,27 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ title, image, link })
   };
 
   return (
-    <div className="relative flex-shrink-0 w-64 h-80 sm:w-72 sm:h-80 md:w-80 md:h-96 lg:w-80 lg:h-80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer transition-all duration-300 ease-out hover:shadow-xl">
+    <div 
+      className="relative flex-shrink-0 w-64 h-80 sm:w-72 sm:h-80 md:w-80 md:h-96 lg:w-80 lg:h-80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer transition-all duration-300 ease-out hover:shadow-xl"
+      style={{
+        WebkitMaskImage: '-webkit-radial-gradient(white, black)', // Safari clipping fix
+        WebkitMaskRepeat: 'no-repeat',
+        WebkitMaskSize: '100% 100%',
+      }}
+    >
       {/* Background Image */}
       <img 
         src={image} 
         alt={title}
-        className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+        className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110 rounded-2xl" 
         loading="lazy"
       />
       
       {/* Dark Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-2xl"></div>
       
       {/* Content Overlay */}
-      <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-5 lg:p-6">
+      <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-5 lg:p-6 rounded-2xl">
         <div className="flex items-end justify-between">
           {/* Destination Title - Bottom Left */}
           <h3 className="text-white font-bold text-lg sm:text-xl lg:text-2xl leading-tight max-w-[70%]">
