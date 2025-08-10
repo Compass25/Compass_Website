@@ -23,22 +23,13 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ title, image, link })
       }}
     >
       {/* Background Image */}
-<div
-  className="w-full h-full overflow-hidden rounded-2xl transition-transform duration-500 ease-out group-hover:scale-110"
-  style={{
-    transformStyle: 'preserve-3d',
-    willChange: 'transform',
-    transform: 'translateZ(0)',
-  }}
->
       <img 
         src={image} 
         alt={title}
         className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110 rounded-2xl" 
         loading="lazy"
       />
-
-
+      
       {/* Dark Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-2xl"></div>
       
