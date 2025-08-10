@@ -23,12 +23,18 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ title, image, link })
       }}
     >
       {/* Background Image */}
-      <img 
-        src={image} 
-        alt={title}
-        className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110 rounded-2xl" 
-        loading="lazy"
-      />
+<img 
+  src={image} 
+  alt={title}
+  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110 rounded-2xl" 
+  style={{
+    minWidth: '100%',
+    minHeight: '100%',
+    WebkitTransform: 'translateZ(0)', // Safari smooth scale fix
+  }}
+  loading="lazy"
+/>
+
       
       {/* Dark Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent rounded-2xl"></div>
