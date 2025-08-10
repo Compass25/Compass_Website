@@ -83,13 +83,9 @@ const DestinationCarousel: React.FC<DestinationCarouselProps> = ({ destinations 
         ref={scrollContainerRef}
         className="overflow-x-auto scrollbar-hide scroll-smooth"
         style={{
-        scrollSnapType: 'x mandatory',
-        WebkitOverflowScrolling: 'touch', // Smooth scroll on Safari (iOS/macOS)
-        transform: 'translateZ(0)',        // Force GPU acceleration
-        willChange: 'transform',           // Hint browser for smoother scroll
-  }}
->
-
+          scrollSnapType: 'x mandatory',
+        }}
+      >
         <div className="flex gap-4 sm:gap-5 lg:gap-6 px-4 sm:px-6 lg:px-8" style={{ width: 'max-content' }}>
           {destinations.map((destination, index) => (
             <div 
