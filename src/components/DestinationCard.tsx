@@ -15,9 +15,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ title, image, link })
   };
 
   return (
-    <div className="relative flex-shrink-0 w-64 h-80 sm:w-72 sm:h-80 md:w-80 md:h-96 lg:w-80 lg:h-80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer transition-all duration-300 ease-out hover:shadow-xl" 
-    style={{ WebkitMaskImage: '-webkit-radial-gradient(white, black)' }} // Safari round corner fix 
-    >
+    <div className="relative flex-shrink-0 w-64 h-80 sm:w-72 sm:h-80 md:w-80 md:h-96 lg:w-80 lg:h-80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer transition-all duration-300 ease-out hover:shadow-xl">
       {/* Background Image */}
       <img 
         src={image} 
