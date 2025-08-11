@@ -94,22 +94,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-const signInWithGoogle = async () => {
-  try {
-    // Save the current page before redirecting to Google
-    localStorage.setItem('redirectAfterLogin', window.location.href);
+  const signInWithGoogle = async () => {
+    try {
+      // Save the page user was on before clicking Google login
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          'preAuthPath',
+          window.location.pathname + window.location.search
+        );
+      }
 
-    const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`;
+      const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`;
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-        queryParams: {
-          prompt: 'select_account', // forces account picker every time
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            prompt: 'select_account', // Always show account picker
+          },
         },
-      },
-    });
+      });
       if (error) {
         toast({
           title: 'Authentication Error',
