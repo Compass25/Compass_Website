@@ -1,4 +1,4 @@
-// integrations/supabase/wrappedClient.ts
+/*integrations/supabase/wrappedClient.ts
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
