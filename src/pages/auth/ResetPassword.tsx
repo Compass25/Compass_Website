@@ -21,34 +21,28 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Handle the recovery session from URL hash or query params
-    const handleRecoverySession = async () => {
-      try {
-        // Check for session in URL (Supabase handles this automatically)
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          toast({
-            title: 'Invalid Reset Link',
-            description: 'This password reset link is invalid or has expired.',
-            variant: 'destructive',
-          });
-          navigate('/auth/login');
-          return;
-        }
+useEffect(() => {
+  const handleRecoverySession = async () => {
+    try {
+      // Sign out any session to prevent auto-login
+      await supabase.auth.signOut();
 
-        // Check if this is a recovery session
-        const type = searchParams.get('type');
-        if (type !== 'recovery' && !data.session) {
-          toast({
-            title: 'Invalid Reset Link',
-            description: 'This password reset link is invalid or has expired.',
-            variant: 'destructive',
-          });
-          navigate('/auth/login');
-        }
-      } catch (error) {
+      // Then check for session (should be null now)
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error || data.session) {
+        // If still a session exists, treat as invalid or redirect to login
+        toast({
+          title: 'Invalid Reset Link',
+          description: 'This password reset link is invalid or has expired.',
+          variant: 'destructive',
+        });
+        navigate('/auth/login');
+        return;
+      }
+
+      const type = searchParams.get('type');
+      if (type !== 'recovery') {
         toast({
           title: 'Invalid Reset Link',
           description: 'This password reset link is invalid or has expired.',
@@ -56,10 +50,18 @@ const ResetPassword = () => {
         });
         navigate('/auth/login');
       }
-    };
+    } catch (error) {
+      toast({
+        title: 'Invalid Reset Link',
+        description: 'This password reset link is invalid or has expired.',
+        variant: 'destructive',
+      });
+      navigate('/auth/login');
+    }
+  };
 
-    handleRecoverySession();
-  }, [searchParams, navigate, toast]);
+  handleRecoverySession();
+}, [searchParams, navigate, toast]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
