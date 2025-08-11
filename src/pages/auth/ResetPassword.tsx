@@ -15,12 +15,17 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isValidResetLink, setIsValidResetLink] = useState(false);
+  const [resetTokens, setResetTokens] = useState<{
+    accessToken: string;
+    refreshToken: string;
+  } | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const handlePasswordReset = async () => {
+    const validateResetLink = async () => {
       try {
         // Parse URL hash for tokens (Supabase uses hash fragments)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -38,22 +43,14 @@ const ResetPassword = () => {
         const finalType = type || queryType;
 
         if (finalType === 'recovery' && finalAccessToken && finalRefreshToken) {
-          // Set the session with the recovery tokens
-          const { error } = await supabase.auth.setSession({
-            access_token: finalAccessToken,
-            refresh_token: finalRefreshToken,
+          // Store tokens for later use but NEVER set session
+          setResetTokens({
+            accessToken: finalAccessToken,
+            refreshToken: finalRefreshToken,
           });
-
-          if (error) {
-            throw error;
-          }
+          setIsValidResetLink(true);
         } else {
-          // Check if there's already a valid session
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          if (error || !session) {
-            throw new Error('No valid session found');
-          }
+          throw new Error('Invalid or missing reset tokens');
         }
       } catch (error) {
         toast({
@@ -65,7 +62,7 @@ const ResetPassword = () => {
       }
     };
 
-    handlePasswordReset();
+    validateResetLink();
   }, [searchParams, navigate, toast]);
 
   const validateForm = () => {
@@ -92,16 +89,23 @@ const ResetPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateForm() || !resetTokens) {
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
+      // Create a temporary client instance for password update only
+      const tempClient = supabase.auth.admin;
+      
+      // Use the stored tokens to update password without setting session
+      const { error } = await supabase.auth.updateUser(
+        { password: password },
+        {
+          accessToken: resetTokens.accessToken
+        }
+      );
 
       if (error) {
         toast({
@@ -112,12 +116,9 @@ const ResetPassword = () => {
         return;
       }
 
-      // Sign out the user immediately after password update
-      await supabase.auth.signOut();
-
       toast({
         title: 'Password Updated',
-        description: 'Your password has been successfully updated.',
+        description: 'Your password has been successfully updated. Please log in with your new password.',
       });
       navigate('/auth/login');
     } catch (error: any) {
@@ -143,6 +144,22 @@ const ResetPassword = () => {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
+
+  // Don't render the form until we validate the reset link
+  if (!isValidResetLink) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+            <CardContent className="p-8 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600">Validating reset link...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
