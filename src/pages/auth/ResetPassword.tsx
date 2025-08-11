@@ -59,6 +59,7 @@ useEffect(() => {
     }
   };
 
+
   handleRecoverySession();
 }, [searchParams, navigate, toast]);
 
