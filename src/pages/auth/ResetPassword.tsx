@@ -15,16 +15,14 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [recoveryTokens, setRecoveryTokens] = useState<{
-    accessToken: string;
-    refreshToken: string;
-  } | null>(null);
+  const [isValidResetLink, setIsValidResetLink] = useState(false);
+  const [isValidating, setIsValidating] = useState(true);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const validateRecoveryTokens = () => {
+    const validateRecoveryTokens = async () => {
       try {
         // Parse URL hash for tokens (Supabase uses hash fragments)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -42,11 +40,20 @@ const ResetPassword = () => {
         const finalType = type || queryType;
 
         if (finalType === 'recovery' && finalAccessToken && finalRefreshToken) {
-          // Store tokens for later use without establishing a session
-          setRecoveryTokens({
-            accessToken: finalAccessToken,
-            refreshToken: finalRefreshToken,
+          // Validate tokens without establishing a session
+          // We'll create a temporary client instance to test the tokens
+          const tempResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+              'Authorization': `Bearer ${finalAccessToken}`,
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+            }
           });
+
+          if (tempResponse.ok) {
+            setIsValidResetLink(true);
+          } else {
+            throw new Error('Invalid tokens');
+          }
         } else {
           throw new Error('Invalid recovery tokens');
         }
@@ -57,6 +64,8 @@ const ResetPassword = () => {
           variant: 'destructive',
         });
         navigate('/auth/login');
+      } finally {
+        setIsValidating(false);
       }
     };
 
@@ -91,39 +100,35 @@ const ResetPassword = () => {
       return;
     }
 
-    if (!recoveryTokens) {
-      toast({
-        title: 'Error',
-        description: 'Recovery tokens are missing. Please try the reset link again.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // Temporarily set session only for the password update
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: recoveryTokens.accessToken,
-        refresh_token: recoveryTokens.refreshToken,
-      });
+      // Get tokens from URL again for the password update
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
 
-      if (sessionError) {
-        throw sessionError;
+      if (!accessToken || !refreshToken) {
+        throw new Error('Recovery tokens not found');
       }
 
-      // Update the password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
+      // Update password using the REST API directly without establishing a session
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          password: password
+        })
       });
 
-      if (updateError) {
-        throw updateError;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update password');
       }
-
-      // Immediately sign out the user after password update
-      await supabase.auth.signOut();
 
       toast({
         title: 'Password Updated',
@@ -131,13 +136,6 @@ const ResetPassword = () => {
       });
       navigate('/auth/login');
     } catch (error: any) {
-      // Make sure to sign out even if there was an error
-      try {
-        await supabase.auth.signOut();
-      } catch (signOutError) {
-        // Ignore sign out errors
-      }
-
       toast({
         title: 'Error',
         description: error.message || 'An unexpected error occurred. Please try again.',
@@ -161,8 +159,8 @@ const ResetPassword = () => {
     }
   };
 
-  // Don't render the form until we have valid recovery tokens
-  if (!recoveryTokens) {
+  // Don't render the form until we have validated the reset link
+  if (isValidating) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -175,6 +173,11 @@ const ResetPassword = () => {
         </div>
       </div>
     );
+  }
+
+  // If validation failed, this component will have already navigated away
+  if (!isValidResetLink) {
+    return null;
   }
 
   return (
