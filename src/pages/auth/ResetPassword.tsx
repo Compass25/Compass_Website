@@ -17,6 +17,10 @@ const ResetPassword = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isValidResetLink, setIsValidResetLink] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
+  const [recoveryTokens, setRecoveryTokens] = useState<{
+    accessToken: string;
+    refreshToken: string;
+  } | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -40,20 +44,12 @@ const ResetPassword = () => {
         const finalType = type || queryType;
 
         if (finalType === 'recovery' && finalAccessToken && finalRefreshToken) {
-          // Validate tokens without establishing a session
-          // We'll create a temporary client instance to test the tokens
-          const tempResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
-            headers: {
-              'Authorization': `Bearer ${finalAccessToken}`,
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
-            }
+          // Store tokens for later use but don't set session yet
+          setRecoveryTokens({
+            accessToken: finalAccessToken,
+            refreshToken: finalRefreshToken
           });
-
-          if (tempResponse.ok) {
-            setIsValidResetLink(true);
-          } else {
-            throw new Error('Invalid tokens');
-          }
+          setIsValidResetLink(true);
         } else {
           throw new Error('Invalid recovery tokens');
         }
@@ -96,46 +92,52 @@ const ResetPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateForm() || !recoveryTokens) {
       return;
     }
 
     setLoading(true);
 
     try {
-      // Get tokens from URL again for the password update
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
-
-      if (!accessToken || !refreshToken) {
-        throw new Error('Recovery tokens not found');
-      }
-
-      // Update password using the REST API directly without establishing a session
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/auth/v1/user`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          password: password
-        })
+      // Create a temporary session ONLY for the password update
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: recoveryTokens.accessToken,
+        refresh_token: recoveryTokens.refreshToken,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update password');
+      if (sessionError) {
+        throw sessionError;
       }
+
+      // Update the password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Immediately sign out to prevent auto-login
+      await supabase.auth.signOut();
 
       toast({
         title: 'Password Updated',
         description: 'Your password has been successfully updated. Please log in with your new password.',
       });
+      
+      // Clear the URL hash to prevent reuse
+      window.location.hash = '';
+      
       navigate('/auth/login');
     } catch (error: any) {
+      // Ensure we sign out even if there's an error
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.error('Error signing out:', signOutError);
+      }
+
       toast({
         title: 'Error',
         description: error.message || 'An unexpected error occurred. Please try again.',
