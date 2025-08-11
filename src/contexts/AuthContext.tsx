@@ -95,22 +95,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signInWithGoogle = async () => {
-    try {
-      // Remove Supabase-hosted screen from browser history
-      window.history.replaceState(null, "", window.location.pathname);
-      
-      const redirectUrl = `${window.location.origin}/auth/callback`;
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
+  try {
+    const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/reset-password`;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl
+      }
+    });
 
       if (error) {
         toast({
