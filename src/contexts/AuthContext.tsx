@@ -40,9 +40,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching profile:', error);
         return;
       }
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+
+      // If no profile exists, create it
+      if (!data) {
+        const { error: insertError } = await supabase.from('profiles').insert([
+          {
+            id: userId,
+            full_name: user?.user_metadata?.full_name || '',
+            avatar_url: user?.user_metadata?.avatar_url || '',
+            email: user?.email || '',
+          },
+        ]);
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+        } else {
+          console.log('New profile created for user:', userId);
+        }
+
+        setProfile({
+          id: userId,
+          full_name: user?.user_metadata?.full_name || '',
+          avatar_url: user?.user_metadata?.avatar_url || '',
+          email: user?.email || '',
+        });
+      } else {
+        setProfile(data);
+      }
+    } catch (err) {
+      console.error('Error fetching/creating profile:', err);
     }
   };
 
@@ -55,11 +81,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
         if (session?.user) {
-          fetchProfile(session.user.id);
+          setTimeout(() => fetchProfile(session.user.id), 0);
         } else {
           setProfile(null);
         }
+
         setLoading(false);
       }
     );
@@ -68,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        setTimeout(() => fetchProfile(session.user.id), 0);
       }
       setLoading(false);
     });
@@ -78,10 +106,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     try {
+      const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
         },
       });
 
@@ -92,14 +122,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           variant: 'destructive',
         });
       }
+
       return { error };
-    } catch (error: any) {
+    } catch (err: any) {
       toast({
         title: 'Authentication Error',
         description: 'Failed to sign in with Google',
         variant: 'destructive',
       });
-      return { error };
+      return { error: err };
     }
   };
 
@@ -107,11 +138,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        toast({ title: 'Sign Out Error', description: error.message, variant: 'destructive' });
+        toast({
+          title: 'Sign Out Error',
+          description: error.message,
+          variant: 'destructive',
+        });
       } else {
-        toast({ title: 'Signed Out', description: 'You have been successfully signed out.' });
+        toast({
+          title: 'Signed Out',
+          description: 'You have been successfully signed out.',
+        });
       }
-    } catch (error: any) {
+    } catch (err: any) {
       toast({
         title: 'Sign Out Error',
         description: 'Failed to sign out',
