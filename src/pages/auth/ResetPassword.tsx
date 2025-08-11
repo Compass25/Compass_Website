@@ -15,24 +15,23 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSessionValid, setIsSessionValid] = useState<boolean | null>(null); // null = loading
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Track whether session is valid and recovery type
-  const [isValidRecovery, setIsValidRecovery] = React.useState(false);
-
   useEffect(() => {
-    const checkRecoverySession = async () => {
+    const checkSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
 
         if (error || !data.session) {
           toast({
-            title: 'Invalid or Expired Link',
+            title: 'Invalid Reset Link',
             description: 'This password reset link is invalid or has expired.',
             variant: 'destructive',
           });
+          setIsSessionValid(false);
           navigate('/auth/login', { replace: true });
           return;
         }
@@ -40,45 +39,40 @@ const ResetPassword = () => {
         const type = searchParams.get('type');
         if (type !== 'recovery') {
           toast({
-            title: 'Invalid Link',
-            description: 'This password reset link is invalid.',
+            title: 'Invalid Reset Link',
+            description: 'This password reset link is invalid or has expired.',
             variant: 'destructive',
           });
+          setIsSessionValid(false);
           navigate('/auth/login', { replace: true });
           return;
         }
 
-        // Session and type are valid
-        setIsValidRecovery(true);
+        setIsSessionValid(true); // session valid, allow password reset
       } catch {
         toast({
-          title: 'Invalid or Expired Link',
+          title: 'Invalid Reset Link',
           description: 'This password reset link is invalid or has expired.',
           variant: 'destructive',
         });
+        setIsSessionValid(false);
         navigate('/auth/login', { replace: true });
       }
     };
 
-    checkRecoverySession();
+    checkSession();
   }, [searchParams, navigate, toast]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
-    } else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password)) {
+    if (!password) newErrors.password = 'Password is required';
+    else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters long';
+    else if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(password))
       newErrors.password = 'Password must contain both letters and numbers';
-    }
 
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
+    if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
+    else if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -89,35 +83,28 @@ const ResetPassword = () => {
 
     if (!validateForm()) return;
 
-    if (!isValidRecovery) {
+    if (!isSessionValid) {
       toast({
-        title: 'Session Expired',
-        description: 'Your password reset session has expired. Please request a new reset email.',
+        title: 'Invalid Session',
+        description: 'Cannot update password because the reset session is invalid or expired.',
         variant: 'destructive',
       });
-      navigate('/auth/login');
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password,
-      });
+      const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
       } else {
         toast({
           title: 'Password Updated',
-          description: 'Your password has been successfully updated. You are now signed in.',
+          description: 'Your password has been successfully updated. You are now signed in with your new password.',
         });
-        navigate('/dashboard', { replace: true }); // Your authenticated route here
+        navigate('/dashboard', { replace: true });
       }
     } catch {
       toast({
@@ -130,14 +117,13 @@ const ResetPassword = () => {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    if (field === 'password') setPassword(value);
-    else setConfirmPassword(value);
+  if (isSessionValid === null) {
+    // Optionally, show loading spinner or blank page while checking session
+    return <div>Loading...</div>;
+  }
 
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
-    }
-  };
+  // If session invalid, component redirected already, but just in case:
+  if (!isSessionValid) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
@@ -158,15 +144,16 @@ const ResetPassword = () => {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your new password"
                     value={password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
+                    }}
                     className={`pr-10 ${errors.password ? 'border-red-500' : ''}`}
-                    disabled={!isValidRecovery}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    disabled={!isValidRecovery}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -182,15 +169,16 @@ const ResetPassword = () => {
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="Confirm your new password"
                     value={confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                    }}
                     className={`pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
-                    disabled={!isValidRecovery}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    disabled={!isValidRecovery}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -198,7 +186,7 @@ const ResetPassword = () => {
                 {errors.confirmPassword && <p className="text-sm text-red-600">{errors.confirmPassword}</p>}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading || !isValidRecovery} size="lg">
+              <Button type="submit" className="w-full" disabled={loading} size="lg">
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
