@@ -101,10 +101,12 @@ const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectUrl
+        redirectTo: redirectUrl,
+        queryParams: {
+          prompt: 'select_account' // forces account picker every time
+        }
       }
     });
-
       if (error) {
         toast({
           title: 'Authentication Error',
