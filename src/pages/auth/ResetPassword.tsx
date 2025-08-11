@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/lib/supabaseClient"; // your Supabase client
+import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -10,61 +10,55 @@ export default function ResetPassword() {
   const [isValidating, setIsValidating] = useState(true);
   const [isValidResetLink, setIsValidResetLink] = useState(false);
   const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
-  const [supabaseUrl, setSupabaseUrl] = useState("");
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
-  // ✅ Prevent Supabase from auto-logging in with token
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+  // 🚫 Prevent auto-login from token
   useEffect(() => {
     supabase.auth.signOut().catch(() => {});
   }, []);
 
-  // ✅ Validate recovery link without creating a session
+  // ✅ Validate recovery token without creating a session
   useEffect(() => {
-    const validateRecoveryTokens = async () => {
+    const validateRecoveryLink = async () => {
       try {
-        const url = import.meta.env.VITE_SUPABASE_URL;
-        if (!url) throw new Error("Supabase URL not set");
-        setSupabaseUrl(url);
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+          throw new Error("Supabase config missing");
+        }
 
-        // Extract from hash fragment (#access_token) or query params (?access_token)
+        // Check both hash (#access_token) and query (?access_token)
         const hashParams = new URLSearchParams(
-          typeof window !== "undefined"
-            ? window.location.hash.substring(1)
-            : ""
+          window.location.hash.substring(1)
         );
-        const accessToken = hashParams.get("access_token");
-        const type = hashParams.get("type");
-
         const queryAccessToken = searchParams.get("access_token");
-        const queryType = searchParams.get("type");
 
-        const finalAccessToken = accessToken || queryAccessToken;
-        const finalType = type || queryType;
+        const token = hashParams.get("access_token") || queryAccessToken;
+        const type = hashParams.get("type") || searchParams.get("type");
 
-        if (finalType === "recovery" && finalAccessToken) {
-          // Call Supabase REST API to verify token without creating session
-          const response = await fetch(`${url}/auth/v1/user`, {
+        if (type === "recovery" && token) {
+          const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
             headers: {
-              Authorization: `Bearer ${finalAccessToken}`,
-              apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+              Authorization: `Bearer ${token}`,
+              apikey: SUPABASE_ANON_KEY,
             },
           });
 
-          if (response.ok) {
-            setRecoveryToken(finalAccessToken);
-            setIsValidResetLink(true);
-          } else {
-            throw new Error("Invalid recovery token");
-          }
+          if (!res.ok) throw new Error("Invalid or expired token");
+
+          setRecoveryToken(token);
+          setIsValidResetLink(true);
         } else {
-          throw new Error("Invalid recovery link");
+          throw new Error("Invalid reset link");
         }
-      } catch {
+      } catch (err) {
         toast({
           title: "Invalid Reset Link",
-          description: "This password reset link is invalid or has expired.",
+          description: "This password reset link is invalid or expired.",
           variant: "destructive",
         });
         navigate("/auth/login");
@@ -73,44 +67,41 @@ export default function ResetPassword() {
       }
     };
 
-    validateRecoveryTokens();
-  }, [searchParams, navigate, toast]);
+    validateRecoveryLink();
+  }, [searchParams, SUPABASE_URL, SUPABASE_ANON_KEY, navigate, toast]);
 
-  // ✅ Handle password reset submission
+  // ✅ Submit new password without auto-login
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recoveryToken) return;
 
     try {
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${recoveryToken}`,
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY || "",
+          apikey: SUPABASE_ANON_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ password }),
       });
 
-      if (response.ok) {
-        toast({
-          title: "Password Reset Successful",
-          description: "Your password has been updated. Please log in again.",
-        });
-
-        // ✅ Redirect to login after clearing token
-        if (typeof window !== "undefined") {
-          window.location.hash = "";
-        }
-        navigate("/auth/login");
-      } else {
-        const error = await response.json();
-        throw new Error(error.message);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to reset password");
       }
-    } catch (error: any) {
+
+      toast({
+        title: "Password Reset Successful",
+        description: "Your password has been updated. Please log in.",
+      });
+
+      window.location.hash = ""; // remove token from URL
+      navigate("/auth/login");
+    } catch (err: any) {
       toast({
         title: "Password Reset Failed",
-        description: error.message || "Something went wrong. Please try again.",
+        description: err.message || "Something went wrong.",
         variant: "destructive",
       });
     }
@@ -124,9 +115,7 @@ export default function ResetPassword() {
     );
   }
 
-  if (!isValidResetLink) {
-    return null; // Already redirected
-  }
+  if (!isValidResetLink) return null;
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
