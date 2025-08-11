@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,42 +16,51 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const init = async () => {
-      const params = new URLSearchParams(location.search);
-      const type = params.get('type');
-      const accessToken = params.get('access_token');
+useEffect(() => {
+  const handleRecoverySession = async () => {
+    try {
+      // Sign out any session to prevent auto-login
+      await supabase.auth.signOut();
 
-      if (type !== 'recovery' || !accessToken) {
+      // Then check for session (should be null now)
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error || data.session) {
+        // If still a session exists, treat as invalid or redirect to login
         toast({
           title: 'Invalid Reset Link',
           description: 'This password reset link is invalid or has expired.',
           variant: 'destructive',
         });
-        navigate('/auth/login', { replace: true });
+        navigate('/auth/login');
         return;
       }
 
-      // Sign out any existing session to prevent auto-login
-      await supabase.auth.signOut();
+      const type = searchParams.get('type');
+      if (type !== 'recovery') {
+        toast({
+          title: 'Invalid Reset Link',
+          description: 'This password reset link is invalid or has expired.',
+          variant: 'destructive',
+        });
+        navigate('/auth/login');
+      }
+    } catch (error) {
+      toast({
+        title: 'Invalid Reset Link',
+        description: 'This password reset link is invalid or has expired.',
+        variant: 'destructive',
+      });
+      navigate('/auth/login');
+    }
+  };
 
-      // Remove the reset tokens from URL to prevent auto-login on reload
-      params.delete('type');
-      params.delete('access_token');
-
-      const newSearch = params.toString();
-      const newPath = location.pathname + (newSearch ? `?${newSearch}` : '');
-
-      // Replace URL without tokens to stay on reset-password page
-      navigate(newPath, { replace: true });
-    };
-
-    init();
-  }, [location, navigate, toast]);
+  handleRecoverySession();
+}, [searchParams, navigate, toast]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -76,7 +85,7 @@ const ResetPassword = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!validateForm()) {
       return;
     }
@@ -85,7 +94,7 @@ const ResetPassword = () => {
 
     try {
       const { error } = await supabase.auth.updateUser({
-        password: password,
+        password: password
       });
 
       if (error) {
@@ -97,8 +106,7 @@ const ResetPassword = () => {
       } else {
         toast({
           title: 'Password Updated',
-          description:
-            'Your password has been successfully updated. You can now sign in with your new password.',
+          description: 'Your password has been successfully updated. You can now sign in with your new password.',
         });
         navigate('/auth/login');
       }
@@ -119,10 +127,10 @@ const ResetPassword = () => {
     } else {
       setConfirmPassword(value);
     }
-
+    
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -131,10 +139,14 @@ const ResetPassword = () => {
       <div className="w-full max-w-md">
         <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-8 pt-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Set New Password</h1>
-            <p className="text-gray-600">Enter your new password below</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Set New Password
+            </h1>
+            <p className="text-gray-600">
+              Enter your new password below
+            </p>
           </CardHeader>
-
+          
           <CardContent className="px-8 pb-8">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -146,7 +158,7 @@ const ResetPassword = () => {
                     placeholder="Enter your new password"
                     value={password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={`pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                    className={pr-10 ${errors.password ? 'border-red-500' : ''}}
                   />
                   <button
                     type="button"
@@ -156,7 +168,9 @@ const ResetPassword = () => {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.password && <p className="text-sm text-red-600">{errors.password}</p>}
+                {errors.password && (
+                  <p className="text-sm text-red-600">{errors.password}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -168,7 +182,7 @@ const ResetPassword = () => {
                     placeholder="Confirm your new password"
                     value={confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className={`pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                    className={pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}}
                   />
                   <button
                     type="button"
@@ -183,7 +197,12 @@ const ResetPassword = () => {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading} size="lg">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading}
+                size="lg"
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
