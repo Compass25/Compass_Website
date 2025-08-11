@@ -51,7 +51,7 @@ const ResetPassword = () => {
           return;
         }
 
-        // Set the session but don't auto-login the user to the app
+        // Set the session using the tokens from the URL
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
@@ -67,7 +67,7 @@ const ResetPassword = () => {
           return;
         }
 
-        // Verify this is actually a recovery session by checking the session metadata
+        // Verify this is actually a recovery session
         if (!data.session.user.recovery_sent_at && !data.session.user.email_confirmed_at) {
           toast({
             title: 'Invalid Reset Link',
