@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+/*import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -12,4 +12,4 @@ export const supabase = createClient<Database>(
       detectSessionInUrl: false, // disables auto-login from URL hash tokens
     },
   }
-);
+);*/
