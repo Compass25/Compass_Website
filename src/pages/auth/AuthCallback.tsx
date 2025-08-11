@@ -1,42 +1,55 @@
-// src/pages/auth/AuthCallback.tsx
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-const AuthCallback: React.FC = () => {
+const AuthCallback = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const handleAuthRedirect = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const { data: { user } } = await supabase.auth.getUser();
+    const handleAuthCallback = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          toast({
+            title: 'Authentication Error',
+            description: error.message,
+            variant: 'destructive',
+          });
+          navigate('/auth/login');
+          return;
+        }
 
-      // Check URL for type query
-      const params = new URLSearchParams(window.location.hash.replace('#', '?'));
-      const type = params.get('type');
-
-      console.log('Auth callback type:', type);
-
-      if (type === 'recovery') {
-        // Reset password flow
-        console.log('Redirecting to reset password page...');
-        navigate('/auth/reset-password');
-      } 
-      else if (session && user) {
-        // Normal login (Google Auth etc.)
-        console.log('Logged in, redirecting to home...');
-        navigate('/');
-      } 
-      else {
-        console.log('No session, redirecting to login...');
+        if (data.session) {
+          toast({
+            title: 'Welcome!',
+            description: 'You have been successfully signed in.',
+          });
+          navigate('/');
+        } else {
+          navigate('/auth/login');
+        }
+      } catch (error) {
+        console.error('Auth callback error:', error);
         navigate('/auth/login');
       }
     };
 
-    handleAuthRedirect();
-  }, [navigate]);
+    handleAuthCallback();
+  }, [navigate, toast]);
 
-  return <p>Processing authentication...</p>;
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
+        <p className="text-gray-600">Completing sign in...</p>
+      </div>
+    </div>
+  );
 };
 
 export default AuthCallback;
