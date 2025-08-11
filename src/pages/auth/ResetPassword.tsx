@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient'; // Make sure you have this
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -22,6 +23,12 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // 🚫 Prevent auto-login from Supabase when reset link is opened
+  useEffect(() => {
+    supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  }, []);
+
+  // Validate reset link & extract token
   useEffect(() => {
     const validateRecoveryTokens = async () => {
       try {
@@ -39,6 +46,7 @@ const ResetPassword = () => {
         const finalType = type || queryType;
 
         if (finalType === 'recovery' && finalAccessToken) {
+          // Validate token manually without creating a session
           const response = await fetch(`${url}/auth/v1/user`, {
             headers: {
               'Authorization': `Bearer ${finalAccessToken}`,
@@ -55,7 +63,7 @@ const ResetPassword = () => {
         } else {
           throw new Error('Invalid recovery link');
         }
-      } catch (error) {
+      } catch {
         toast({
           title: 'Invalid Reset Link',
           description: 'This password reset link is invalid or has expired.',
@@ -98,6 +106,7 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
+      // Update password without logging in
       const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
         method: 'PUT',
         headers: {
@@ -118,7 +127,10 @@ const ResetPassword = () => {
         description: 'Your password has been successfully updated. Please log in with your new password.',
       });
 
+      // Clear hash & any temp token
       window.location.hash = '';
+      await supabase.auth.signOut({ scope: 'local' });
+
       navigate('/auth/login');
     } catch (error: any) {
       toast({
