@@ -101,8 +101,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: redirectUrl
-      }
+        redirectTo: redirectUrl,
+        queryParams: {
+          prompt: 'select_account', // forces Google to show account chooser
+        },
+      },
     });
 
       if (error) {
