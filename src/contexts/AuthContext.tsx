@@ -35,40 +35,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select('*')
         .eq('id', userId)
         .single();
-
+      
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
         return;
       }
-
-      // If no profile exists, create it
-      if (!data) {
-        const { error: insertError } = await supabase.from('profiles').insert([
-          {
-            id: userId,
-            full_name: user?.user_metadata?.full_name || '',
-            avatar_url: user?.user_metadata?.avatar_url || '',
-            email: user?.email || '',
-          },
-        ]);
-
-        if (insertError) {
-          console.error('Error creating profile:', insertError);
-        } else {
-          console.log('New profile created for user:', userId);
-        }
-
-        setProfile({
-          id: userId,
-          full_name: user?.user_metadata?.full_name || '',
-          avatar_url: user?.user_metadata?.avatar_url || '',
-          email: user?.email || '',
-        });
-      } else {
-        setProfile(data);
-      }
-    } catch (err) {
-      console.error('Error fetching/creating profile:', err);
+      
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
     }
   };
 
@@ -104,12 +79,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-const signInWithGoogle = async () => {
-  try {
-    // ✅ Fallback to window.location.origin if env var is missing
-    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-    const redirectUrl = `${siteUrl}/auth/callback`;
-    console.log("Google OAuth redirect to:", redirectUrl);
+  const signInWithGoogle = async () => {
+    try {
+      if (typeof window === 'undefined') {
+        console.warn('Google sign-in must be called from the browser');
+        return { error: 'Not in browser' };
+      }
+
+      const redirectUrl = `${window.location.origin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -127,13 +104,13 @@ const signInWithGoogle = async () => {
       }
 
       return { error };
-    } catch (err: any) {
+    } catch (error: any) {
       toast({
         title: 'Authentication Error',
         description: 'Failed to sign in with Google',
         variant: 'destructive',
       });
-      return { error: err };
+      return { error };
     }
   };
 
@@ -152,7 +129,7 @@ const signInWithGoogle = async () => {
           description: 'You have been successfully signed out.',
         });
       }
-    } catch (err: any) {
+    } catch (error: any) {
       toast({
         title: 'Sign Out Error',
         description: 'Failed to sign out',
@@ -162,7 +139,17 @@ const signInWithGoogle = async () => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signInWithGoogle, signOut, profile, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        signInWithGoogle,
+        signOut,
+        profile,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
