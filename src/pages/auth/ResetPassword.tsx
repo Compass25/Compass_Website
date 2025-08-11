@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const ResetPassword = () => {
@@ -14,113 +15,45 @@ const ResetPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isValidResetLink, setIsValidResetLink] = useState(false);
-  const [isValidating, setIsValidating] = useState(true);
-  const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
-  const [supabaseUrl, setSupabaseUrl] = useState<string>('');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up broadcast channel for tab communication
-    const channel = new BroadcastChannel('app-tabs');
-    
-    // Listen for messages from other tabs
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'CLOSE_OTHER_TABS' && event.data.source !== 'reset-password') {
-        // This tab should close itself as it's not the reset password tab
-        window.close();
-      }
-    };
-    
-    channel.addEventListener('message', handleMessage);
-    
-    // Broadcast message to close other tabs when reset password page loads
-    const closeOtherTabs = () => {
-      channel.postMessage({
-        type: 'CLOSE_OTHER_TABS',
-        source: 'reset-password',
-        timestamp: Date.now()
-      });
-    };
-    
-    // Close other tabs immediately when this component mounts
-    closeOtherTabs();
-    
-    // Also try to close any tabs that might have opened this page
-    try {
-      // If this window was opened by another window, close the opener
-      if (window.opener && !window.opener.closed) {
-        window.opener.close();
-      }
-    } catch (error) {
-      // Silently fail if we can't close the opener due to security restrictions
-      console.log('Could not close opener window due to security restrictions');
-    }
-    
-    // Clean up broadcast channel on unmount
-    return () => {
-      channel.removeEventListener('message', handleMessage);
-      channel.close();
-    };
-  }, []);
-
-  useEffect(() => {
-    const validateRecoveryTokens = async () => {
+    const handlePasswordReset = async () => {
       try {
-        // Get Supabase URL from environment or current origin
-        const url = import.meta.env.VITE_SUPABASE_URL || window.location.origin;
-        setSupabaseUrl(url);
-
-        // CRITICAL: Clear any existing Supabase session immediately
-        // This prevents auto-login from recovery tokens
-        try {
-          await fetch(`${url}/auth/v1/logout`, {
-            method: 'POST',
-            headers: {
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ scope: 'local' })
-          });
-          
-          // Also clear localStorage to ensure no session persists
-          localStorage.removeItem(`sb-${url.split('//')[1]?.split('.')[0]}-auth-token`);
-          sessionStorage.clear();
-        } catch (clearError) {
-          console.log('Session clear attempt completed');
-        }
-
         // Parse URL hash for tokens (Supabase uses hash fragments)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
         const type = hashParams.get('type');
 
         // Also check query parameters as fallback
         const queryAccessToken = searchParams.get('access_token');
+        const queryRefreshToken = searchParams.get('refresh_token');
         const queryType = searchParams.get('type');
 
         const finalAccessToken = accessToken || queryAccessToken;
+        const finalRefreshToken = refreshToken || queryRefreshToken;
         const finalType = type || queryType;
 
-        if (finalType === 'recovery' && finalAccessToken) {
-          // Validate the token by making a simple API call without establishing a session
-          const response = await fetch(`${url}/auth/v1/user`, {
-            headers: {
-              'Authorization': `Bearer ${finalAccessToken}`,
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-            }
+        if (finalType === 'recovery' && finalAccessToken && finalRefreshToken) {
+          // Set the session with the recovery tokens
+          const { error } = await supabase.auth.setSession({
+            access_token: finalAccessToken,
+            refresh_token: finalRefreshToken,
           });
 
-          if (response.ok) {
-            setRecoveryToken(finalAccessToken);
-            setIsValidResetLink(true);
-          } else {
-            throw new Error('Invalid recovery token');
+          if (error) {
+            throw error;
           }
         } else {
-          throw new Error('Invalid recovery link');
+          // Check if there's already a valid session
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error || !session) {
+            throw new Error('No valid session found');
+          }
         }
       } catch (error) {
         toast({
@@ -129,12 +62,10 @@ const ResetPassword = () => {
           variant: 'destructive',
         });
         navigate('/auth/login');
-      } finally {
-        setIsValidating(false);
       }
     };
 
-    validateRecoveryTokens();
+    handlePasswordReset();
   }, [searchParams, navigate, toast]);
 
   const validateForm = () => {
@@ -161,44 +92,38 @@ const ResetPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm() || !recoveryToken) {
+    if (!validateForm()) {
       return;
     }
 
     setLoading(true);
 
     try {
-      // Update password using direct API call to avoid any session creation
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${recoveryToken}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          password: password
-        })
+      const { error } = await supabase.auth.updateUser({
+        password: password
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update password');
+      if (error) {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
       }
+
+      // Sign out the user immediately after password update
+      await supabase.auth.signOut();
 
       toast({
         title: 'Password Updated',
-        description: 'Your password has been successfully updated. Please log in with your new password.',
+        description: 'Your password has been successfully updated.',
       });
-      
-      // Clear the URL hash to prevent reuse
-      window.location.hash = '';
-      
       navigate('/auth/login');
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'An unexpected error occurred. Please try again.',
+        description: 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -218,27 +143,6 @@ const ResetPassword = () => {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
-
-  // Don't render the form until we have validated the reset link
-  if (isValidating) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-            <CardContent className="px-8 py-16 text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Verifying reset link...</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  // If validation failed, this component will have already navigated away
-  if (!isValidResetLink) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
