@@ -96,24 +96,22 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      // Create a temporary client instance for password update only
-      const tempClient = supabase.auth.admin;
-      
-      // Use the stored tokens to update password without setting session
-      const { error } = await supabase.auth.updateUser(
-        { password: password },
-        {
-          accessToken: resetTokens.accessToken
-        }
-      );
+      // Use the REST API directly to update password without any session
+      const response = await fetch(`${supabase.supabaseUrl}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${resetTokens.accessToken}`,
+          'apikey': supabase.supabaseKey
+        },
+        body: JSON.stringify({
+          password: password
+        })
+      });
 
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
-        return;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update password');
       }
 
       toast({
@@ -124,7 +122,7 @@ const ResetPassword = () => {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
+        description: error.message || 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
     } finally {
