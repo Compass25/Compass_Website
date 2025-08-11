@@ -96,6 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 const signInWithGoogle = async () => {
   try {
+    // Save the current page before redirecting to Google
+    localStorage.setItem('redirectAfterLogin', window.location.href);
+
     const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`;
 
     const { error } = await supabase.auth.signInWithOAuth({
@@ -103,9 +106,9 @@ const signInWithGoogle = async () => {
       options: {
         redirectTo: redirectUrl,
         queryParams: {
-          prompt: 'select_account' // forces account picker every time
-        }
-      }
+          prompt: 'select_account', // forces account picker every time
+        },
+      },
     });
       if (error) {
         toast({
