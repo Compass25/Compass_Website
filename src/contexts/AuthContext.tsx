@@ -104,9 +104,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithGoogle = async () => {
-    try {
-      const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`;
+const signInWithGoogle = async () => {
+  try {
+    // ✅ Fallback to window.location.origin if env var is missing
+    const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+    const redirectUrl = `${siteUrl}/auth/callback`;
+    console.log("Google OAuth redirect to:", redirectUrl);
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
