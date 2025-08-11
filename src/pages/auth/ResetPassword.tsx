@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const ResetPassword = () => {
@@ -17,10 +16,8 @@ const ResetPassword = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isValidResetLink, setIsValidResetLink] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
-  const [recoveryTokens, setRecoveryTokens] = useState<{
-    accessToken: string;
-    refreshToken: string;
-  } | null>(null);
+  const [recoveryToken, setRecoveryToken] = useState<string | null>(null);
+  const [supabaseUrl, setSupabaseUrl] = useState<string>('');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,30 +25,39 @@ const ResetPassword = () => {
   useEffect(() => {
     const validateRecoveryTokens = async () => {
       try {
+        // Get Supabase URL from environment or current origin
+        const url = import.meta.env.VITE_SUPABASE_URL || window.location.origin;
+        setSupabaseUrl(url);
+
         // Parse URL hash for tokens (Supabase uses hash fragments)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
         const type = hashParams.get('type');
 
         // Also check query parameters as fallback
         const queryAccessToken = searchParams.get('access_token');
-        const queryRefreshToken = searchParams.get('refresh_token');
         const queryType = searchParams.get('type');
 
         const finalAccessToken = accessToken || queryAccessToken;
-        const finalRefreshToken = refreshToken || queryRefreshToken;
         const finalType = type || queryType;
 
-        if (finalType === 'recovery' && finalAccessToken && finalRefreshToken) {
-          // Store tokens for later use but don't set session yet
-          setRecoveryTokens({
-            accessToken: finalAccessToken,
-            refreshToken: finalRefreshToken
+        if (finalType === 'recovery' && finalAccessToken) {
+          // Validate the token by making a simple API call without establishing a session
+          const response = await fetch(`${url}/auth/v1/user`, {
+            headers: {
+              'Authorization': `Bearer ${finalAccessToken}`,
+              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+            }
           });
-          setIsValidResetLink(true);
+
+          if (response.ok) {
+            setRecoveryToken(finalAccessToken);
+            setIsValidResetLink(true);
+          } else {
+            throw new Error('Invalid recovery token');
+          }
         } else {
-          throw new Error('Invalid recovery tokens');
+          throw new Error('Invalid recovery link');
         }
       } catch (error) {
         toast({
@@ -92,34 +98,30 @@ const ResetPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm() || !recoveryTokens) {
+    if (!validateForm() || !recoveryToken) {
       return;
     }
 
     setLoading(true);
 
     try {
-      // Create a temporary session ONLY for the password update
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: recoveryTokens.accessToken,
-        refresh_token: recoveryTokens.refreshToken,
+      // Update password using direct API call to avoid any session creation
+      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${recoveryToken}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          password: password
+        })
       });
 
-      if (sessionError) {
-        throw sessionError;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update password');
       }
-
-      // Update the password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Immediately sign out to prevent auto-login
-      await supabase.auth.signOut();
 
       toast({
         title: 'Password Updated',
@@ -131,13 +133,6 @@ const ResetPassword = () => {
       
       navigate('/auth/login');
     } catch (error: any) {
-      // Ensure we sign out even if there's an error
-      try {
-        await supabase.auth.signOut();
-      } catch (signOutError) {
-        console.error('Error signing out:', signOutError);
-      }
-
       toast({
         title: 'Error',
         description: error.message || 'An unexpected error occurred. Please try again.',
