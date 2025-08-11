@@ -17,61 +17,63 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }) => {
   const [emailSent, setEmailSent] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email) {
-      toast({
-        title: 'Email Required',
-        description: 'Please enter your email address.',
-        variant: 'destructive',
-      });
-      return;
-    }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({
-        title: 'Invalid Email',
-        description: 'Please enter a valid email address.',
-        variant: 'destructive',
-      });
-      return;
-    }
+  if (!email) {
+    toast({
+      title: 'Email Required',
+      description: 'Please enter your email address.',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-    setLoading(true);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    toast({
+      title: 'Invalid Email',
+      description: 'Please enter a valid email address.',
+      variant: 'destructive',
+    });
+    return;
+  }
 
-    try {
-      const redirectUrl = `${window.location.origin}/auth/reset-password`;
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/reset-password`,
-});
+  setLoading(true);
 
+  try {
+    // Remove trailing slash from base URL if present
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, '') || window.location.origin;
+    const redirectUrl = `${baseUrl}/auth/reset-password`;
 
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        });
-      } else {
-        setEmailSent(true);
-        toast({
-          title: 'Reset Link Sent',
-          description: 'Password reset link sent to your email.',
-        });
-      }
-    } catch (error: any) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl,
+    });
+
+    if (error) {
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
+        description: error.message,
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
+    } else {
+      setEmailSent(true);
+      toast({
+        title: 'Reset Link Sent',
+        description: 'Password reset link sent to your email.',
+      });
     }
-  };
+  } catch (error: any) {
+    toast({
+      title: 'Error',
+      description: 'An unexpected error occurred. Please try again.',
+      variant: 'destructive',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   if (emailSent) {
     return (
