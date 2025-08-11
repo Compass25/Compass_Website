@@ -23,6 +23,94 @@ const ResetPassword = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Set up broadcast channel for tab communication
+    const channel = new BroadcastChannel('app-tabs');
+    
+    // Listen for messages from other tabs
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'CLOSE_OTHER_TABS' && event.data.source !== 'reset-password') {
+        // This tab should close itself as it's not the reset password tab
+        window.close();
+      }
+    };
+    
+    channel.addEventListener('message', handleMessage);
+    
+    // Broadcast message to close other tabs when reset password page loads
+    const closeOtherTabs = () => {
+      channel.postMessage({
+        type: 'CLOSE_OTHER_TABS',
+        source: 'reset-password',
+        timestamp: Date.now()
+      });
+    };
+    
+    // Close other tabs immediately when this component mounts
+    closeOtherTabs();
+    
+    // Also try to close any tabs that might have opened this page
+    try {
+      // If this window was opened by another window, close the opener
+      if (window.opener && !window.opener.closed) {
+        window.opener.close();
+      }
+    } catch (error) {
+      // Silently fail if we can't close the opener due to security restrictions
+      console.log('Could not close opener window due to security restrictions');
+    }
+    
+    // Clean up broadcast channel on unmount
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+      channel.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    // Set up broadcast channel for tab communication
+    const channel = new BroadcastChannel('app-tabs');
+    
+    // Listen for messages from other tabs
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'CLOSE_OTHER_TABS' && event.data.source !== 'reset-password') {
+        // This tab should close itself as it's not the reset password tab
+        window.close();
+      }
+    };
+    
+    channel.addEventListener('message', handleMessage);
+    
+    // Broadcast message to close other tabs when reset password page loads
+    const closeOtherTabs = () => {
+      channel.postMessage({
+        type: 'CLOSE_OTHER_TABS',
+        source: 'reset-password',
+        timestamp: Date.now()
+      });
+    };
+    
+    // Close other tabs immediately when this component mounts
+    closeOtherTabs();
+    
+    // Also try to close any tabs that might have opened this page
+    try {
+      // If this window was opened by another window, close the opener
+      if (window.opener && !window.opener.closed) {
+        window.opener.close();
+      }
+    } catch (error) {
+      // Silently fail if we can't close the opener due to security restrictions
+      console.log('Could not close opener window due to security restrictions');
+    }
+    
+    // Clean up broadcast channel on unmount
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+      channel.close();
+    };
+  }, []);
+
+  useEffect(() => {
     const validateRecoveryTokens = async () => {
       try {
         // Get Supabase URL from environment or current origin
