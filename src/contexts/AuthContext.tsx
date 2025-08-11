@@ -96,18 +96,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 const signInWithGoogle = async () => {
   try {
-    // This ensures it works both locally and in production
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    // Sign out any existing session before starting OAuth flow
+    await supabase.auth.signOut();
+
+    // Save current page path to return after login
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('preAuthPath', window.location.pathname + window.location.search);
+    }
+
+    const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: redirectUrl,
         queryParams: {
-          prompt: 'select_account', // Always show Google account picker
+          prompt: 'select_account', // force account chooser every time
         },
       },
     });
+
       if (error) {
         toast({
           title: 'Authentication Error',
