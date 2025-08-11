@@ -7,7 +7,6 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import Logo from '@/components/Logo';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -20,48 +19,47 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-useEffect(() => {
-  const handleRecoverySession = async () => {
-    try {
-      // Sign out any session to prevent auto-login
-      await supabase.auth.signOut();
+  useEffect(() => {
+    const handleRecoverySession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-      // Then check for session (should be null now)
-      const { data, error } = await supabase.auth.getSession();
+        // If a recovery session exists, sign out immediately to prevent auto-login
+        if (data.session && searchParams.get('type') === 'recovery') {
+          await supabase.auth.signOut();
+        }
 
-      if (error || data.session) {
-        // If still a session exists, treat as invalid or redirect to login
+        if (error) {
+          toast({
+            title: 'Invalid Reset Link',
+            description: 'This password reset link is invalid or has expired.',
+            variant: 'destructive',
+          });
+          navigate('/auth/login');
+          return;
+        }
+
+        const type = searchParams.get('type');
+        if (type !== 'recovery') {
+          toast({
+            title: 'Invalid Reset Link',
+            description: 'This password reset link is invalid or has expired.',
+            variant: 'destructive',
+          });
+          navigate('/auth/login');
+        }
+      } catch (error) {
         toast({
           title: 'Invalid Reset Link',
           description: 'This password reset link is invalid or has expired.',
           variant: 'destructive',
         });
         navigate('/auth/login');
-        return;
       }
+    };
 
-      const type = searchParams.get('type');
-      if (type !== 'recovery') {
-        toast({
-          title: 'Invalid Reset Link',
-          description: 'This password reset link is invalid or has expired.',
-          variant: 'destructive',
-        });
-        navigate('/auth/login');
-      }
-    } catch (error) {
-      toast({
-        title: 'Invalid Reset Link',
-        description: 'This password reset link is invalid or has expired.',
-        variant: 'destructive',
-      });
-      navigate('/auth/login');
-    }
-  };
-
-
-  handleRecoverySession();
-}, [searchParams, navigate, toast]);
+    handleRecoverySession();
+  }, [searchParams, navigate, toast]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -86,16 +84,14 @@ useEffect(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+
+    if (!validateForm()) return;
 
     setLoading(true);
 
     try {
       const { error } = await supabase.auth.updateUser({
-        password: password
+        password,
       });
 
       if (error) {
@@ -111,7 +107,7 @@ useEffect(() => {
         });
         navigate('/auth/login');
       }
-    } catch (error: any) {
+    } catch {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred. Please try again.',
@@ -128,10 +124,8 @@ useEffect(() => {
     } else {
       setConfirmPassword(value);
     }
-    
-    // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -140,14 +134,10 @@ useEffect(() => {
       <div className="w-full max-w-md">
         <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-8 pt-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Set New Password
-            </h1>
-            <p className="text-gray-600">
-              Enter your new password below
-            </p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Set New Password</h1>
+            <p className="text-gray-600">Enter your new password below</p>
           </CardHeader>
-          
+
           <CardContent className="px-8 pb-8">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -159,7 +149,7 @@ useEffect(() => {
                     placeholder="Enter your new password"
                     value={password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={pr-10 ${errors.password ? 'border-red-500' : ''}}
+                    className={`pr-10 ${errors.password ? 'border-red-500' : ''}`}
                   />
                   <button
                     type="button"
@@ -169,9 +159,7 @@ useEffect(() => {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.password && (
-                  <p className="text-sm text-red-600">{errors.password}</p>
-                )}
+                {errors.password && <p className="text-sm text-red-600">{errors.password}</p>}
               </div>
 
               <div className="space-y-2">
@@ -183,7 +171,7 @@ useEffect(() => {
                     placeholder="Confirm your new password"
                     value={confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className={pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}}
+                    className={`pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
                   />
                   <button
                     type="button"
@@ -198,12 +186,7 @@ useEffect(() => {
                 )}
               </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-                size="lg"
-              >
+              <Button type="submit" className="w-full" disabled={loading} size="lg">
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
