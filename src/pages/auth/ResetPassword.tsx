@@ -24,18 +24,13 @@ const ResetPassword = () => {
       try {
         const { data, error } = await supabase.auth.getSession();
 
-        // If a recovery session exists, sign out immediately to prevent auto-login
-        if (data.session && searchParams.get('type') === 'recovery') {
-          await supabase.auth.signOut();
-        }
-
-        if (error) {
+        if (error || !data.session) {
           toast({
             title: 'Invalid Reset Link',
             description: 'This password reset link is invalid or has expired.',
             variant: 'destructive',
           });
-          navigate('/auth/login');
+          navigate('/auth/login', { replace: true });
           return;
         }
 
@@ -46,7 +41,8 @@ const ResetPassword = () => {
             description: 'This password reset link is invalid or has expired.',
             variant: 'destructive',
           });
-          navigate('/auth/login');
+          navigate('/auth/login', { replace: true });
+          return;
         }
       } catch (error) {
         toast({
@@ -54,7 +50,7 @@ const ResetPassword = () => {
           description: 'This password reset link is invalid or has expired.',
           variant: 'destructive',
         });
-        navigate('/auth/login');
+        navigate('/auth/login', { replace: true });
       }
     };
 
@@ -103,9 +99,9 @@ const ResetPassword = () => {
       } else {
         toast({
           title: 'Password Updated',
-          description: 'Your password has been successfully updated. You can now sign in with your new password.',
+          description: 'Your password has been successfully updated. You are now signed in with your new password.',
         });
-        navigate('/auth/login');
+        navigate('/dashboard', { replace: true }); // Change to your logged-in route
       }
     } catch {
       toast({
@@ -181,9 +177,7 @@ const ResetPassword = () => {
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.confirmPassword && (
-                  <p className="text-sm text-red-600">{errors.confirmPassword}</p>
-                )}
+                {errors.confirmPassword && <p className="text-sm text-red-600">{errors.confirmPassword}</p>}
               </div>
 
               <Button type="submit" className="w-full" disabled={loading} size="lg">
