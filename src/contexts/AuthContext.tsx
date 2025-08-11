@@ -1,86 +1,162 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
 
-const AuthContext = createContext<any>(null);
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  signInWithGoogle: () => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  profile: any;
+  refreshProfile: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const fetchProfile = async (userId: string) => {
-    // Your profile fetching logic here
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+      
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
   };
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        const isRecovery =
-          typeof window !== "undefined" &&
-          window.location.search.includes("type=recovery");
-
+        console.log('Auth state changed:', event, session?.user?.email);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
         if (session?.user) {
+          // Defer profile fetching to avoid potential deadlocks
           setTimeout(() => {
             fetchProfile(session.user.id);
           }, 0);
-
-          if (isRecovery) {
-            // If the login is from a recovery link, go to reset password page
-            navigate("/auth/reset-password");
-          } else {
-            // Normal login goes home
-            navigate("/");
-          }
         } else {
           setProfile(null);
         }
+        
+        setLoading(false);
       }
     );
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        setTimeout(() => {
+          fetchProfile(session.user.id);
+        }, 0);
+      }
+      
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithGoogle = async () => {
-    try {
-      const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`;
+const signInWithGoogle = async () => {
+  try {
+    const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`;
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUrl,
-        },
-      });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl
+      }
+    });
 
       if (error) {
         toast({
-          title: "Authentication Error",
+          title: 'Authentication Error',
           description: error.message,
-          variant: "destructive",
+          variant: 'destructive',
         });
       }
 
       return { error };
     } catch (error: any) {
       toast({
-        title: "Authentication Error",
-        description: "Failed to sign in with Google",
-        variant: "destructive",
+        title: 'Authentication Error',
+        description: 'Failed to sign in with Google',
+        variant: 'destructive',
       });
       return { error };
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ profile, signInWithGoogle }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  const signOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast({
+          title: 'Sign Out Error',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Signed Out',
+          description: 'You have been successfully signed out.',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Sign Out Error',
+        description: 'Failed to sign out',
+        variant: 'destructive',
+      });
+    }
+  };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
+  const value = {
+    user,
+    session,
+    loading,
+    signInWithGoogle,
+    signOut,
+    profile,
+    refreshProfile,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
