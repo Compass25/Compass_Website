@@ -1,4 +1,3 @@
-import React from 'react';
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,27 +11,49 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          toast({
-            title: 'Authentication Error',
-            description: error.message,
-            variant: 'destructive',
-          });
-          navigate('/auth/login');
-          return;
-        }
+        // Handle the fragment (#) or query params returned from OAuth redirect
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
 
-        if (data.session) {
+        if (access_token) {
+          // If tokens are in the URL, set the session
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token: refresh_token || '',
+          });
+
+          if (error) {
+            toast({
+              title: 'Authentication Error',
+              description: error.message,
+              variant: 'destructive',
+            });
+            navigate('/auth/login');
+            return;
+          }
+
           toast({
             title: 'Welcome!',
             description: 'You have been successfully signed in.',
           });
           navigate('/');
-        } else {
-          navigate('/auth/login');
+          return;
         }
+
+        // Fallback: try to get existing session
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error || !data.session) {
+          navigate('/auth/login');
+          return;
+        }
+
+        toast({
+          title: 'Welcome!',
+          description: 'You have been successfully signed in.',
+        });
+        navigate('/');
       } catch (error) {
         console.error('Auth callback error:', error);
         navigate('/auth/login');
