@@ -32,7 +32,7 @@ const ResetPassword = () => {
             variant: 'destructive',
           });
           setIsSessionValid(false);
-          navigate('/auth/login', { replace: true });
+          navigate('/auth/reset-password', { replace: true });
           return;
         }
 
@@ -44,7 +44,7 @@ const ResetPassword = () => {
             variant: 'destructive',
           });
           setIsSessionValid(false);
-          navigate('/auth/login', { replace: true });
+          navigate('/auth/reset-password', { replace: true });
           return;
         }
 
@@ -56,7 +56,7 @@ const ResetPassword = () => {
           variant: 'destructive',
         });
         setIsSessionValid(false);
-        navigate('/auth/login', { replace: true });
+        navigate('/auth/reset-password', { replace: true });
       }
     };
 
