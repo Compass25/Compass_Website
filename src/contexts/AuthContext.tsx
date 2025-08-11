@@ -40,7 +40,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching profile:', error);
         return;
       }
-
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -57,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => fetchProfile(session.user.id), 0);
+          fetchProfile(session.user.id);
         } else {
           setProfile(null);
         }
@@ -69,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        setTimeout(() => fetchProfile(session.user.id), 0);
+        fetchProfile(session.user.id);
       }
       setLoading(false);
     });
@@ -77,22 +76,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-const signInWithGoogle = async () => {
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback` // match your AuthCallback route
-      }
-    });
+  const signInWithGoogle = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
       if (error) {
-        toast({ title: 'Authentication Error', description: error.message, variant: 'destructive' });
+        toast({
+          title: 'Authentication Error',
+          description: error.message,
+          variant: 'destructive',
+        });
       }
-
       return { error };
     } catch (error: any) {
-      toast({ title: 'Authentication Error', description: 'Failed to sign in with Google', variant: 'destructive' });
+      toast({
+        title: 'Authentication Error',
+        description: 'Failed to sign in with Google',
+        variant: 'destructive',
+      });
       return { error };
     }
   };
@@ -106,7 +112,11 @@ const signInWithGoogle = async () => {
         toast({ title: 'Signed Out', description: 'You have been successfully signed out.' });
       }
     } catch (error: any) {
-      toast({ title: 'Sign Out Error', description: 'Failed to sign out', variant: 'destructive' });
+      toast({
+        title: 'Sign Out Error',
+        description: 'Failed to sign out',
+        variant: 'destructive',
+      });
     }
   };
 
