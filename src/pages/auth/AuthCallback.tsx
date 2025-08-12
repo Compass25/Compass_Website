@@ -1,55 +1,57 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-const AuthCallback = () => {
+export default function AuthCallback() {
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        
+    const params = new URLSearchParams(
+      window.location.hash
+        ? window.location.hash.substring(1)
+        : window.location.search
+    );
+
+    const type = params.get("type");
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    const handleAuth = async () => {
+      if (type === "recovery" && accessToken && refreshToken) {
+        // ✅ Set the recovery session
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
         if (error) {
-          toast({
-            title: 'Authentication Error',
-            description: error.message,
-            variant: 'destructive',
-          });
-          navigate('/auth/login');
+          console.error("Error setting recovery session:", error.message);
+          navigate("/auth/login");
           return;
         }
 
+        // ✅ Wait until session is confirmed
+        const { data } = await supabase.auth.getSession();
         if (data.session) {
-          toast({
-            title: 'Welcome!',
-            description: 'You have been successfully signed in.',
-          });
-          navigate('/');
+          navigate("/auth/reset-password");
         } else {
-          navigate('/auth/login');
+          console.error("Session not set after recovery.");
+          navigate("/auth/login");
         }
-      } catch (error) {
-        console.error('Auth callback error:', error);
-        navigate('/auth/login');
+        return;
+      }
+
+      // ✅ Normal sign-in handling
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/dashboard");
+      } else {
+        navigate("/auth/login");
       }
     };
 
-    handleAuthCallback();
-  }, [navigate, toast]);
+    handleAuth();
+  }, [navigate]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
-        <p className="text-gray-600">Completing sign in...</p>
-      </div>
-    </div>
-  );
-};
-
-export default AuthCallback;
+  return <p>Completing sign in...</p>;
+}
