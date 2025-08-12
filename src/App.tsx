@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import WhatsAppButton from "./components/WhatsAppButton";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <RedirectRecovery />
+            <ScrollToTop />
             <Routes>
               {/* Auth Routes */}
               <Route path="/auth/login" element={<Login />} />

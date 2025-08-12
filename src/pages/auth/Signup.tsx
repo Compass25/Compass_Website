@@ -5,6 +5,7 @@ import GoogleButton from '@/components/auth/GoogleButton';
 import EmailPasswordForm from '@/components/auth/EmailPasswordForm';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import Logo from '@/components/Logo';
+import { ArrowLeft } from "lucide-react";
 const Signup = () => {
   const {
     user,
@@ -84,10 +85,16 @@ const Signup = () => {
               </div>
               
               <div className="text-center">
-                <Link to="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                  ← Back to Home
-                </Link>
-              </div>
+  <Link
+    to="/"
+    className="flex items-center justify-center gap-2 text-gray-800 hover:text-gray-600"
+    style={{ fontSize: "14px" }}
+  >
+    <ArrowLeft style={{ width: "16px", height: "14px" }} />
+    <span>Back to Home</span>
+  </Link>
+</div>
+
             </div>
           </CardContent>
         </Card>

@@ -42,11 +42,11 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }) => {
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/auth/reset-password`;
-      
+     const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL || window.location.origin}/auth/reset-password`;
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
-      });
+        redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/auth/reset-password`,
+      });      
 
       if (error) {
         toast({
@@ -135,14 +135,15 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onBack }) => {
         </Button>
       </form>
 
-      <Button 
-        onClick={onBack}
-        variant="ghost"
-        className="w-full"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Login
-      </Button>
+      <div 
+  onClick={onBack} 
+  className="flex items-center justify-center gap-2 cursor-pointer text-gray-800 hover:text-gray-600"
+  style={{ fontSize: "14px" }} // set your desired font size here
+>
+  <ArrowLeft style={{ width: "16px", height: "14px" }} /> 
+  <span>Back to Login</span>
+</div>
+
     </div>
   );
 };

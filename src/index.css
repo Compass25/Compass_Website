@@ -322,3 +322,11 @@ html {
     display: none;
   }
 }
+/* Safari-specific fixes (macOS & iOS) */
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    -webkit-overflow-scrolling: touch; /* Momentum scroll for iOS/macOS */
+    scroll-behavior: smooth !important;
+  }
+}
+

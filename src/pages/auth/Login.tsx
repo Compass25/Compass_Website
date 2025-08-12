@@ -7,6 +7,7 @@ import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
+import { ArrowLeft } from "lucide-react";
 const Login = () => {
   const {
     user,
@@ -82,8 +83,13 @@ const Login = () => {
                 </div>
                 
                 <div className="text-center">
-                  <Link to="/" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
-                    ← Back to Home
+                  <Link
+                    to="/"
+                    className="flex items-center justify-center gap-2 text-gray-800 hover:text-gray-600"
+                    style={{ fontSize: "14px" }}
+                  >
+                  <ArrowLeft style={{ width: "16px", height: "14px" }} />
+                  <span>Back to Home</span>
                   </Link>
                 </div>
               </div>}
